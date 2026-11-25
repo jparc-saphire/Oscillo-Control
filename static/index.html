@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Oscillo Control</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header class="top">
+    <div><span class="brand">TEXIO</span><h1>Oscillo Control</h1></div>
+    <div class="connection">
+      <label for="scope">Instrument</label>
+      <select id="scope"></select>
+      <button id="connect" type="button">Connect</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="display" aria-label="Oscilloscope display">
+      <div class="display-header">
+        <div class="view-tabs" role="group" aria-label="Display view">
+          <button id="screen-tab" aria-pressed="true" type="button">Instrument display</button>
+          <button id="wave-tab" aria-pressed="false" type="button">Waveform samples</button>
+        </div>
+        <span id="device-status" role="status">Disconnected</span>
+      </div>
+
+      <div id="display-screen" class="screen">
+        <div id="placeholder">Connect an instrument to view its screen.</div>
+        <img id="screen-image" hidden width="800" height="480" alt="Current oscilloscope screen">
+      </div>
+      <div id="display-wave" class="wave" hidden>
+        <canvas id="waveform" width="960" height="450" aria-label="Sample amplitude versus elapsed time"></canvas>
+        <p id="wave-info">Capture samples from the selected channel.</p>
+      </div>
+
+      <div class="display-footer">
+        <span id="identity">TEXIO DCS-2000E</span>
+        <div id="screen-tools" class="display-tools">
+          <label><input type="checkbox" id="live" checked> Live display</label>
+          <button type="button" id="refresh" data-ready disabled>Refresh</button>
+        </div>
+        <div id="wave-tools" class="display-tools" hidden>
+          <button type="button" id="capture" data-ready disabled>Capture CH1</button>
+          <a id="csv" download="CH1-waveform.csv" aria-disabled="true">Download CSV</a>
+        </div>
+      </div>
+      <p id="notice" class="notice" role="status"></p>
+    </section>
+
+    <aside class="controls" aria-label="Instrument controls">
+      <section class="group">
+        <div class="control-switch">
+          <p id="control-state" role="status">Viewing only</p>
+          <button id="control-toggle" type="button" aria-describedby="control-state" disabled>Enable control</button>
+        </div>
+      </section>
+      <section class="group">
+        <h2>Acquisition</h2>
+        <div class="acquire">
+          <button class="run" type="button" data-acquire="run" data-ready disabled>Run</button>
+          <button class="stop" type="button" data-acquire="stop" data-ready disabled>Stop</button>
+          <button type="button" data-acquire="single" data-ready disabled>Single</button>
+        </div>
+      </section>
+
+      <section class="group">
+        <h2>Vertical <span id="vertical-channel">CH1</span></h2>
+        <p class="control-tip">Type a value and press Apply or Enter. Use −/+ or the knob for steps.</p>
+        <div id="channels" class="channels" role="group" aria-label="Choose a channel">
+          <button data-channel="1" type="button" aria-pressed="true">CH1</button>
+          <button data-channel="2" type="button" aria-pressed="false">CH2</button>
+          <button data-channel="3" type="button" aria-pressed="false">CH3</button>
+          <button data-channel="4" type="button" aria-pressed="false">CH4</button>
+        </div>
+        <label class="check"><input id="channel-enable" type="checkbox" data-ready disabled> Show selected channel</label>
+        <div class="encoder" data-setting="channel-scale">
+          <div class="knob" tabindex="0" aria-label="Adjust vertical scale with the mouse wheel or arrow keys"></div>
+          <label>Scale (V/div)<input type="text" inputmode="decimal" data-value data-ready disabled></label>
+          <button type="button" data-step="-1" data-ready disabled aria-label="Decrease vertical scale">−</button>
+          <button type="button" data-step="1" data-ready disabled aria-label="Increase vertical scale">+</button>
+          <button type="button" data-apply data-ready disabled aria-label="Apply vertical scale">Apply</button>
+        </div>
+        <div class="encoder" data-setting="channel-position">
+          <div class="knob" tabindex="0" aria-label="Adjust vertical position with the mouse wheel or arrow keys"></div>
+          <label>Position (V)<input type="text" inputmode="decimal" data-value data-ready disabled></label>
+          <button type="button" data-step="-1" data-ready disabled aria-label="Move trace down">−</button>
+          <button type="button" data-step="1" data-ready disabled aria-label="Move trace up">+</button>
+          <button type="button" data-apply data-ready disabled aria-label="Apply vertical position">Apply</button>
+        </div>
+      </section>
+
+      <section class="group">
+        <h2>Horizontal</h2>
+        <div class="encoder" data-setting="time-scale">
+          <div class="knob" tabindex="0" aria-label="Adjust horizontal scale with the mouse wheel or arrow keys"></div>
+          <label>Scale (s/div)<input type="text" inputmode="decimal" data-value data-ready disabled></label>
+          <button type="button" data-step="-1" data-ready disabled aria-label="Decrease horizontal scale">−</button>
+          <button type="button" data-step="1" data-ready disabled aria-label="Increase horizontal scale">+</button>
+          <button type="button" data-apply data-ready disabled aria-label="Apply horizontal scale">Apply</button>
+        </div>
+        <div class="encoder" data-setting="time-position">
+          <div class="knob" tabindex="0" aria-label="Adjust horizontal position with the mouse wheel or arrow keys"></div>
+          <label>Position (s)<input type="text" inputmode="decimal" data-value data-ready disabled></label>
+          <button type="button" data-step="-1" data-ready disabled aria-label="Decrease horizontal position">−</button>
+          <button type="button" data-step="1" data-ready disabled aria-label="Increase horizontal position">+</button>
+          <button type="button" data-apply data-ready disabled aria-label="Apply horizontal position">Apply</button>
+        </div>
+      </section>
+
+      <section class="group">
+        <h2>Trigger <span id="trigger-type">—</span></h2>
+        <div class="trigger">
+          <label>Source
+            <select id="trigger-source" data-ready disabled>
+              <option>CH1</option><option>CH2</option><option>CH3</option><option>CH4</option>
+              <option>EXT</option><option>LINE</option>
+            </select>
+          </label>
+          <label>Mode
+            <select id="trigger-mode" data-ready disabled>
+              <option value="AUTO">Auto</option><option value="NORMAL">Normal</option>
+            </select>
+          </label>
+          <label>Slope
+            <select id="trigger-slope" data-ready disabled>
+              <option value="RISE">Rising</option><option value="FALL">Falling</option><option value="EITHER">Either</option>
+            </select>
+          </label>
+          <div class="trigger-level">
+            <label>Level (V)<input type="text" inputmode="decimal" id="trigger-level" data-ready disabled></label>
+            <button type="button" id="apply-trigger-level" data-ready disabled aria-label="Apply trigger level">Apply</button>
+          </div>
+        </div>
+        <button id="trigger-edge" type="button" data-ready disabled>Select edge trigger</button>
+      </section>
+    </aside>
+  </main>
+</body>
+</html>
